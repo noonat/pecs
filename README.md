@@ -5,8 +5,8 @@ pecs is a tiny BDD library for PHP 5.3.
 
 To use the [traditional example](http://rspec.info), it works like this:
 
-    require_once __DIR__."/lib/pecs.php";
-    require_once "bowling.php";
+    require "lib/pecs.php";
+    require "bowling.php";
     
     describe("Bowling", function() {
       it("should score 0 for a gutter game", function() {
@@ -29,7 +29,7 @@ And the output looks something like this:
     Passed: 1 Failed: 0
 
 pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec). The
-only reason it exists is because I got tired of switching between PHPUnit and
+only reason pecs exists is because I got tired of switching between PHPUnit and
 JSpec style tests. GO JSPEC!
 
 License
