@@ -37,14 +37,14 @@ The output looks something like this:
     expected 0 to equal 42
       #0 .../lib/pecs.php(32): pecs\Expectation->assert('_equal', Array, true)
       #1 [internal function]: pecs\Expectation->__call('to_equal', Array)
-      #2 .../test_namespaces.php(87): pecs\Expectation->to_equal(42)
+      #2 .../test_bowlinf.php(15): pecs\Expectation->to_equal(42)
       #3 .../lib/pecs.php(221): {closure}()
       #4 .../lib/pecs.php(192): pecs\Spec->run()
       #5 .../lib/pecs.php(195): pecs\Suite->run()
       #6 .../lib/pecs.php(195): pecs\Suite->run()
       #7 .../lib/pecs.php(262): pecs\Suite->run()
       #8 .../lib/pecs.php(350): pecs\Runner->run(NULL)
-      #9 .../test_namespaces.php(92): pecs\run()
+      #9 .../test_bowling.php(19): pecs\run()
       #10 {main}
 
     Finished in 0.0017 seconds
