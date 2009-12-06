@@ -12,25 +12,56 @@ To use the [traditional example](http://rspec.info), it works like this:
       it("should score 0 for a gutter game", function() {
         $bowling = new Bowling();
         for ($i=0; $i < 20; $i++) {
-          expect($bowling->score)->to_equal(0);
+          $bowling->hit(0);
         }
+        expect($bowling->score)->to_equal(0);
+      });
+      
+      it("should get drinks for free just for being here", function() {
+        $bowling = new Bowling();
+        expect($bowling->score)->to_equal(42);
       });
     });
+    
+    \pecs\run();
 
-And the output looks something like this:
+The output looks something like this:
 
     $ php test_bowling.php 
 
     Bowling
     - should score 0 for a gutter game: pass
+    - should get drinks for free just for being here: fail	
+
+    FAILURE:
+    expected 0 to equal 42
+      #0 .../lib/pecs.php(32): pecs\Expectation->assert('_equal', Array, true)
+      #1 [internal function]: pecs\Expectation->__call('to_equal', Array)
+      #2 .../test_namespaces.php(87): pecs\Expectation->to_equal(42)
+      #3 .../lib/pecs.php(221): {closure}()
+      #4 .../lib/pecs.php(192): pecs\Spec->run()
+      #5 .../lib/pecs.php(195): pecs\Suite->run()
+      #6 .../lib/pecs.php(195): pecs\Suite->run()
+      #7 .../lib/pecs.php(262): pecs\Suite->run()
+      #8 .../lib/pecs.php(350): pecs\Runner->run(NULL)
+      #9 .../test_namespaces.php(92): pecs\run()
+      #10 {main}
 
     Finished in 0.0017 seconds
 
-    Passed: 1 Failed: 0
+    Passed: 1 Failed: 1
 
 pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec). The
 only reason pecs exists is because I got tired of switching between PHPUnit and
 JSpec style tests. GO JSPEC!
+
+Todo
+====
+
+* Add `before`, `before_each`, `after`, and `after_each` hooks
+* Need a script to run a folder of tests
+* Need to add more matchers
+* Need to improve failure output
 
 License
 =======
