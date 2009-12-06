@@ -1,12 +1,12 @@
-magnificent pecs
-================
+work it.
+========
 
 pecs is a tiny BDD library for PHP 5.3.
 
 To use the [traditional example](http://rspec.info), it works like this:
 
-    require __DIR__."/lib/pecs.php";
-    require "bowling.php";
+    require_once __DIR__."/lib/pecs.php";
+    require_once "bowling.php";
     
     describe("Bowling", function() {
       it("should score 0 for a gutter game", function() {
