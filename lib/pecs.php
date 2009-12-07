@@ -14,7 +14,7 @@ function expect($actual) {
 }
 EOC;
 // eval is the only way to execute within global namespace
-if (constant('\PECS_GLOBALS') !== false) eval($code); // global ns aliases
+if (@constant('\PECS_GLOBALS') !== false) eval($code); // global ns aliases
 eval("namespace pecs;\n$code"); // local ns aliases
 
 /// Run the tests.
@@ -151,7 +151,7 @@ class Expect {
       if (isset($this->_aliases[$method]))
          $method = $this->_aliases[$method];
       if (!method_exists($this, $method))
-         throw new \Exception("Unknown expect assertion \"{$method}\"");
+         throw new \Exception("Unknown expectation assertion \"{$method}\"");
       $this->_assert($method, $args, $expectedResult);
       return $this;
    }
@@ -258,6 +258,21 @@ class Expect {
          $n >= $min && $n <= $max, $n,
          'expected %s to have count within %d and %d, was %d',
          $this->actual, $min, $max, $n);
+   }
+   
+   function throw_error($className=null, $message=null) {
+      try {
+         $func = $this->actual;
+         $func();
+         return false;
+      }
+      catch (\Exception $e) {
+         if ((!$className || $e instanceof $className) &&
+             (!$message || $e->getMessage() == $message)) {
+            return true;
+         }
+         throw $e;
+      }
    }
 }
 
