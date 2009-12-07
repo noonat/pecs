@@ -35,9 +35,9 @@ The output looks something like this:
 
     FAILURE:
     expected 0 to equal 42
-      #0 .../lib/pecs.php(32): pecs\Expectation->assert('_equal', Array, true)
-      #1 [internal function]: pecs\Expectation->__call('to_equal', Array)
-      #2 .../test_bowlinf.php(15): pecs\Expectation->to_equal(42)
+      #0 .../lib/pecs.php(32): pecs\Expect->assert('_equal', Array, true)
+      #1 [internal function]: pecs\Expect->__call('to_equal', Array)
+      #2 .../test_bowling.php(15): pecs\Expect->to_equal(42)
       #3 .../lib/pecs.php(221): {closure}()
       #4 .../lib/pecs.php(192): pecs\Spec->run()
       #5 .../lib/pecs.php(195): pecs\Suite->run()
@@ -50,6 +50,9 @@ The output looks something like this:
     Finished in 0.0017 seconds
 
     Passed: 1 Failed: 1
+
+Credit
+======
 
 pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec). The
 only reason pecs exists is because I got tired of switching between PHPUnit and

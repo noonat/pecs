@@ -2,350 +2,319 @@
 
 namespace pecs;
 
-if (getenv('PECS_GLOBALS') !== '0') {
-	require_once __DIR__.'/pecs/globals.php';
+// vomit worth, but no other way to define in
+// the global namespace without a second file
+$code = <<<'EOC'
+function describe($text, $func) {
+   return \pecs\runner()->describe($text, $func);
+}
+function it($text, $func) {
+   return \pecs\runner()->it($text, $func);
+}
+function expect($actual) {
+   return \pecs\runner()->expect($actual);
+}
+EOC;
+eval($code); // global aliases
+eval("namespace pecs;\n$code"); // local aliases
+
+function run($formatter=null) {
+   return runner()->run($formatter);
 }
 
-/// Calls to expect() return a copy of this object. It is for all of the
-/// assertions used within a spec.
-class Expectation {
-	function __construct($actual) {
-		$this->actual = $actual;
-	}
-	
-	function __call($method, $args) {
-		$originalMethod = $method;
-		if (strncmp($method, 'and_', 4) === 0) {
-			$method = substr($method, 4);
-		}
-		if (strncmp($method, 'not_', 4) === 0) {
-			$expectedResult = false;
-			$method = substr($method, 4);
-		}
-		else {
-			$expectedResult = true;
-		}
-		if (strncmp($method, 'to_', 3) === 0) {
-			$method = substr($method, 3);
-		}
-		$method = '_'.ltrim($method, '_');
-		$this->assert($method, $args, $expectedResult);
-	}
-	
-	function assert($matcher, $args, $expectedResult) {
-		if (!method_exists($this, $matcher)) {
-			throw new \Exception("Unknown matcher \"{$matcher}\"");
-		}
-		$leftovers = call_user_func_array(array($this, $matcher), $args);
-		if (!is_array($leftovers)) {
-			$leftovers = array($leftovers);
-		}
-		$result = array_shift($leftovers);
-		if ($result != $expectedResult) {
-			if (!empty($leftovers)) {
-				$format = array_shift($leftovers);
-				$formatArgs = $leftovers;
-			}
-			else {
-				$verb = trim(str_replace('_', ' ', $matcher));
-				$format = "expected %s to {$verb} %s";
-				$formatArgs = $args;
-				array_unshift($formatArgs, $this->actual);
-			}
-			$formatArgs = array_map(function($arg) {
-				return var_export($arg, true);
-			}, $formatArgs);
-			array_unshift($formatArgs, $format);
-			$message = call_user_func_array('sprintf', $formatArgs);
-			Runner::instance()->currentSpec->fail(new \Exception($message));
-		}
-	}
-	
-	function _equal($expected) {
-		return $this->actual === $expected;
-	}
-	
-	function _be_greater_than($expected) {
-		return $this->actual > $expected;
-	}
-	
-	function _be_less_than($expected) {
-		return $this->actual < $expected;
-	}
-	
-	function _be_at_least($expected) {
-		return $this->actual >= $expected;
-	}
-	
-	function _be_at_most($expected) {
-		return $this->actual <= $expected;
-	}
-	
-	function _be_within($min, $max) {
-		return $this->actual >= $min && $this->actual <= $max;
-	}
-	
-	function _be_a($expected) {
-		$class = get_class($this->actual);
-		return array(
-			$class === $expected,
-			'expected %s to be class %s', $class, $expected);
-	}
-	
-	function _be_an_instance_of($expected) {
-		$class = get_class($this->actual);
-		return array(
-			$this->actual instanceof $expected,
-			'expected %s to be an instance of %s, was %s',
-			$this->actual, $expected, $class);
-	}
-	
-	function _be_null() {
-		return is_null($this->actual);
-	}
-	
-	function _be_true() {
-		return $this->actual === true;
-	}
-	
-	function _be_false() {
-		return $this->actual === false;
-	}
-	
-	function _be_empty() {
-		return empty($this->actual);
-	}
-	
-	function _be_type($expected) {
-		return array(
-			$type === $expected,
-			'expected %s to be type %s, was %s',
-			$this->actual, $expected, $type);
-	}
-	
-	function _have_count($expected) {
-		return count($this->actual) === $expected;
-	}
-	
-	function _have_count_within($min, $max) {
-		$count = count($this->actual);
-		return array(
-			$count >= $min && $count <= $max, $count,
-			'expected %s have count within %d and %d, was %d',
-			$this->actual, $min, $max, $count);
-	}
+function runner($newRunner=null) {
+   static $runner=null;
+   if (!$runner || $newRunner) {
+      $runner = $newRunner ?: new Runner();
+   }
+   return $runner;
+}
+
+class Runner {
+   function __construct() {
+      $this->formatter = new Formatter();
+      $this->spec = null;
+      $this->specs = array();
+      $this->suite = null;
+      $this->suites = array();
+   }
+   
+   function describe($description, $body) {
+      $suite = new Suite($description, $body, $this->suite);
+      $this->suites[] = $suite;
+      $this->suite = $suite;
+      $body();
+      $this->suite = $suite->parent;
+      return $suite;
+   }
+
+   function it($description, $body) {
+      $spec = new Spec($description, $body, $this->suite);
+      $this->specs[] = $spec;
+      return $spec;
+   }
+
+   function expect($actualValue) {
+      return new Expect($actualValue, $this->spec);
+   }
+
+   function run($formatter=null) {
+      if (!is_null($formatter)) {
+         $this->formatter = $formatter;
+      }
+      $this->formatter->before();
+      foreach ($this->suites as $suite) {
+         $this->formatter->beforeSuite($suite);
+         foreach ($suite->specs as $spec) {
+            $this->spec = $spec;
+            $this->formatter->beforeSpec($spec);
+            $spec->run();
+            $this->formatter->afterSpec($spec);
+         }
+         $this->formatter->afterSuite($suite);
+      }
+      $this->formatter->after();
+   }
 }
 
 class Suite {
-	function __construct($description=null, $body=null, $parentSuite=null) {
-		$this->description = $description;
-		$this->body = $body;
-		$this->parentSuite = $parentSuite;
-		$this->suites = array();
-		$this->specs = array();
-	}
-	
-	function addSpec($description, $body) {
-		$spec = new Spec($description, $body, $this);
-		Runner::instance()->allSpecs[] = $spec;
-		$this->specs[] = $spec;
-		return $spec;
-	}
-	
-	function addSuite($description, $body) {
-		$suite = new Suite($description, $body, $this);
-		Runner::instance()->allSuites[] = $suite;
-		$this->suites[] = $suite;
-		$suite->compile();
-		return $suite;
-	}
-	
-	function compile() {
-		Runner::instance()->currentSuite = $this;
-		$body = $this->body;
-		if ($body) {
-			$body();
-		}
-		Runner::instance()->currentSuite = $this->parentSuite;
-	}
-	
-	function fullDescription() {
-		if ($this->parentSuite) {
-			$description = $this->parentSuite->fullDescription();
-			if (!empty($description)) {
-				$description .= ' ';
-			}
-			return $description.$this->description;
-		}
-		else {
-			return $this->description;
-		}
-	}
-	
-	function passed() {
-		return true;
-	}
-	
-	function run() {
-		Runner::instance()->formatter->beforeSuite($this);
-		foreach ($this->specs as $spec) {
-			$spec->run();
-		}
-		foreach ($this->suites as $suite) {
-			$suite->run();
-		}
-		Runner::instance()->formatter->afterSuite($this);
-	}
+   function __construct($description=null, $body=null, $parent=null) {
+      $this->specs = array();
+      $this->suites = array();
+      $this->body = $body;
+      if ($parent) {
+         $this->description = trim($parent->description.' '.$description);
+         $this->parent = $parent;
+         $this->parent->push($this);
+      }
+      else {
+         $this->description = $description;
+         $this->parent = null;
+      }
+   }
+   
+   function push($child) {
+      $child instanceof Spec ? $this->specs[]=$child : $this->suites[]=$child;
+   }
 }
 
 class Spec extends Suite {
-	public $exceptions = array();
-	
-	function fail($exception) {
-		$this->exceptions[] = $exception;
-	}
-	
-	function failed() {
-		return !$this->passed();
-	}
-	
-	function passed() {
-		return empty($this->exceptions);
-	}
-	
-	function run() {
-		Runner::instance()->currentSpec = $this;
-		Runner::instance()->formatter->beforeSpec($this);
-		$body = $this->body;
-		try {
-			$body();
-		}
-		catch (\Exception $e) {
-			$this->fail($e);
-		}
-		Runner::instance()->formatter->afterSpec($this);
-	}
+   public $exceptions = array();
+   
+   function __construct($description, $body, $parent) {
+      parent::__construct($description, $body, $parent);
+      $this->description = $description;
+   }
+   
+   function fail($exception) {
+      if (is_string($exception)) {
+         $exception = new \Exception($exception);
+      }
+      $this->exceptions[] = $exception;
+   }
+   
+   function failed() {
+      return !$this->passed();
+   }
+   
+   function passed() {
+      return empty($this->exceptions);
+   }
+   
+   function run() {
+      $body = $this->body;
+      try {
+         $body();
+      }
+      catch (\Exception $e) {
+         $this->fail($e);
+      }
+   }
 }
 
-class Runner extends Suite {
-	static $instance = null;
-	static function instance() {
-		if (is_null(self::$instance)) {
-			self::$instance = new Runner();
-		}
-		return self::$instance;
-	}
-	
-	function __construct() {
-		parent::__construct();
-		$this->allSpecs = array();
-		$this->allSuites = array();
-		$this->currentSuite = $this;
-		$this->formatter = new Formatter();
-	}
-	
-	function describe($description, $body) {
-		return $this->currentSuite->addSuite($description, $body);
-	}
-	
-	function it($description, $body) {
-		return $this->currentSuite->addSpec($description, $body);
-	}
-	
-	function expect($value) {
-		return new Expectation($value);
-	}
-	
-	function run($formatter=null) {
-		$this->formatter = $formatter ? $formatter : new Formatter();
-		$this->formatter->before();
-		parent::run();
-		$this->formatter->after();
-	}
+class Expect {
+   function __construct($actual, $spec) {
+      $this->actual = $actual;
+      $this->spec = $spec;
+   }
+   
+   function __call($method, $args) {
+      $expectedResult = true;
+      if (preg_match('/^(and_)?(not_)?(to_)?_*(.+)$/', $method, $matches)) {
+         $method = $matches[4];
+         $expectedResult = empty($matches[2]);
+      }
+      if (!method_exists($this, $method)) {
+         throw new \Exception("Unknown assertion \"{$method}\"");
+      }
+      $this->_assert($method, $args, $expectedResult);
+      return $this;
+   }
+   
+   function _assert($method, $args, $expectedResult) {
+      $values = (array)call_user_func_array(array($this, $method), $args);
+      $result = array_shift($values);
+      if ($result != $expectedResult) {
+         $this->_fail($method, $args, $result, $expectedResult, $values);
+      }
+   }
+   
+   function _fail($method, $args, $result, $expectedResult, $values) {
+      if (empty($values)) {
+         $format = 'expected %s to '.str_replace('_', ' ', $method).' %s';
+         $values = array_merge(array($this->actual), $args);
+      }
+      else {
+         $format = array_shift($values);
+      }
+      array_walk($values, function(&$v) { $v = var_export($v, true); });
+      $this->spec->fail(new \Exception(vsprintf($format, $values)));
+   }
+   
+   function equal($expected) {
+      return $this->actual === $expected;
+   }
+   
+   function be_greater_than($expected) {
+      return $this->actual > $expected;
+   }
+   
+   function be_less_than($expected) {
+      return $this->actual < $expected;
+   }
+   
+   function be_at_least($expected) {
+      return $this->actual >= $expected;
+   }
+   
+   function be_at_most($expected) {
+      return $this->actual <= $expected;
+   }
+   
+   function be_within($min, $max) {
+      return $this->actual >= $min && $this->actual <= $max;
+   }
+   
+   function be_a($expected) {
+      $class = get_class($this->actual);
+      return array(
+         $class === $expected,
+         'expected %s to be class %s', $class, $expected);
+   }
+   
+   function be_an_instance_of($expected) {
+      $class = get_class($this->actual);
+      return array(
+         $this->actual instanceof $expected,
+         'expected %s to be an instance of %s, was %s',
+         $this->actual, $expected, $class);
+   }
+   
+   function be_null() {
+      return is_null($this->actual);
+   }
+   
+   function be_true() {
+      return $this->actual === true;
+   }
+   
+   function be_false() {
+      return $this->actual === false;
+   }
+   
+   function be_empty() {
+      return empty($this->actual);
+   }
+   
+   function be_type($expected) {
+      return array(
+         $type === $expected,
+         'expected %s to be type %s, was %s',
+         $this->actual, $expected, $type);
+   }
+   
+   function have_count($expected) {
+      return count($this->actual) === $expected;
+   }
+   
+   function have_count_within($min, $max) {
+      $count = count($this->actual);
+      return array(
+         $count >= $min && $count <= $max, $count,
+         'expected %s have count within %d and %d, was %d',
+         $this->actual, $min, $max, $count);
+   }
+}
+
+class Failure extends \Exception {
 }
 
 class Formatter {
-	static $colors = array(
-		'bold'    => 1,
-		'black'   => 30,
-		'red'     => 31,
-		'green'   => 32,
-		'yellow'  => 33,
-		'blue'    => 34,
-		'magenta' => 35,
-		'cyan'    => 36,
-		'white'   => 37
-	);
-	function color($string, $color) {
-		return sprintf("\033[%dm%s\033[0m", self::$colors[$color], $string);
-	}
+   static $colors = array(
+      'bold'    => 1,
+      'black'   => 30,
+      'red'     => 31,
+      'green'   => 32,
+      'yellow'  => 33,
+      'blue'    => 34,
+      'magenta' => 35,
+      'cyan'    => 36,
+      'white'   => 37
+   );
+   function color($string, $color) {
+      return sprintf("\033[%dm%s\033[0m", self::$colors[$color], $string);
+   }
 
-	function before() {
-		$this->startTime = microtime(true);
-	}
-	
-	function beforeSuite($suite) {
-		if ($suite instanceof Runner) return;
-		if (!empty($suite->specs)) {
-			echo $this->color("\n{$suite->fullDescription()}\n", 'bold');
-		}
-	}
-	
-	function beforeSpec($spec) {
-		echo "- {$spec->description}: ";
-	}
-	
-	function afterSpec($spec) {
-		if ($spec->passed()) {
-			echo $this->color("pass\n", 'green');
-		}
-		else {
-			echo $this->color("fail	\n", 'red');
-		}
-	}
-	
-	function afterSuite($suite) {
-	}
-	
-	function after() {
-		$passed = $failed = 0;
-		$specs = Runner::instance()->allSpecs;
-		foreach ($specs as $spec) {
-			if ($spec->failed()) {
-				$failed += 1;
-				foreach ($spec->exceptions as $e) {
-					echo "\nFAILURE:\n";
-					echo $e->getMessage()."\n";
-					echo $e->getTraceAsString()."\n";
-				}
-			}
-			else {
-				$passed += 1;
-			}
-		}
-		$this->endTime = microtime(true);
-		$this->runTime = $this->endTime - $this->startTime;
-		echo "\nFinished in ".number_format($this->runTime, 4)." seconds\n\n";
-		echo $this->color('Passed: ', 'bold');
-		echo $this->color($passed, 'green');
-		echo $this->color(' Failed: ', 'bold');
-		echo $this->color($failed, 'red');
-		echo "\n\n";
-	}
+   function before() {
+      $this->startTime = microtime(true);
+   }
+   
+   function beforeSuite($suite) {
+      if ($suite instanceof Runner) return;
+      if (!empty($suite->specs)) {
+         echo $this->color("\n{$suite->description}\n", 'bold');
+      }
+   }
+   
+   function beforeSpec($spec) {
+      echo "- {$spec->description}: ";
+   }
+   
+   function afterSpec($spec) {
+      if ($spec->passed()) {
+         echo $this->color("pass\n", 'green');
+      }
+      else {
+         echo $this->color("fail   \n", 'red');
+      }
+   }
+   
+   function afterSuite($suite) {
+   }
+   
+   function after() {
+      $passed = $failed = 0;
+      foreach (runner()->specs as $spec) {
+         if ($spec->failed()) {
+            $failed += 1;
+            foreach ($spec->exceptions as $e) {
+               echo "\nFAILURE:\n";
+               echo $e->getMessage()."\n";
+               echo $e->getTraceAsString()."\n";
+            }
+         }
+         else {
+            $passed += 1;
+         }
+      }
+      $this->endTime = microtime(true);
+      $this->runTime = $this->endTime - $this->startTime;
+      echo "\nFinished in ".number_format($this->runTime, 4)." seconds\n\n";
+      echo $this->color('Passed: ', 'bold');
+      echo $this->color($passed, 'green');
+      echo $this->color(' Failed: ', 'bold');
+      echo $this->color($failed, 'red');
+      echo "\n\n";
+   }
 }
 
-function describe($name, $body) {
-	return Runner::instance()->describe($name, $body);
-}
-
-function it($description, $body) {
-	return Runner::instance()->it($description, $body);
-}
-
-function expect($actual) {
-	return Runner::instance()->expect($actual);
-}
-
-function run($formatter=null) {
-	return Runner::instance()->run($formatter);
-}
