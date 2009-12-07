@@ -3,11 +3,17 @@
 namespace pecs;
 
 $code = <<<'EOC'
-function describe($text, $func) {
-   return \pecs\runner()->describe($text, $func);
+function after_each($func) {
+   return \pecs\runner()->after_each($func);
 }
-function it($text, $func) {
-   return \pecs\runner()->it($text, $func);
+function before_each($func) {
+   return \pecs\runner()->after_each($func);
+}
+function describe($description, $func) {
+   return \pecs\runner()->describe($description, $func);
+}
+function it($description, $func) {
+   return \pecs\runner()->it($description, $func);
 }
 function expect($actual) {
    return \pecs\runner()->expect($actual);
@@ -34,23 +40,32 @@ function runner($newRunner=null) {
 class Runner {
    function __construct() {
       $this->formatter = new Formatter();
+      $this->hooks = array();
       $this->spec = null;
       $this->specs = array();
       $this->suite = null;
       $this->suites = array();
    }
    
-   function describe($description, $body) {
-      $suite = new Suite($description, $body, $this->suite);
+   function after_each($func) {
+      $this->hooks['after_each'][$this->suite->id] = $func;
+   }
+   
+   function before_each($func) {
+      $this->hooks['before_each'][$this->suite->id] = $func;
+   }
+   
+   function describe($description, $func) {
+      $suite = new Suite($description, $func, $this->suite);
       $this->suites[] = $suite;
       $this->suite = $suite;
-      $body();
+      $func();
       $this->suite = $suite->parent;
       return $suite;
    }
 
-   function it($description, $body) {
-      $spec = new Spec($description, $body, $this->suite);
+   function it($description, $func) {
+      $spec = new Spec($description, $func, $this->suite);
       $this->specs[] = $spec;
       return $spec;
    }
@@ -79,10 +94,11 @@ class Runner {
 
 /// Contains one or more specs.
 class Suite {
-   function __construct($description=null, $body=null, $parent=null) {
+   function __construct($description=null, $func=null, $parent=null) {
+      $this->id = spl_object_hash($this);
       $this->specs = array();
       $this->suites = array();
-      $this->body = $body;
+      $this->func = $func;
       if ($parent) {
          $this->description = trim($parent->description.' '.$description);
          $this->parent = $parent;
@@ -101,17 +117,17 @@ class Suite {
 
 /// An actual test case.
 class Spec extends Suite {
-   public $exceptions = array();
+   public $failures = array();
    
-   function __construct($description, $body, $parent) {
-      parent::__construct($description, $body, $parent);
+   function __construct($description=null, $func=null, $parent=null) {
+      parent::__construct($description, $func, $parent);
       $this->description = $description;
    }
    
-   function fail($exception) {
-      if (is_string($exception))
-         $exception = new \Exception($exception);
-      $this->exceptions[] = $exception;
+   function fail($failure) {
+      if (is_string($failure))
+         $failure = new \Exception($failure);
+      $this->failures[] = $failure;
    }
    
    function failed() {
@@ -119,13 +135,13 @@ class Spec extends Suite {
    }
    
    function passed() {
-      return empty($this->exceptions);
+      return empty($this->failures);
    }
    
    function run() {
-      $body = $this->body;
+      $func = $this->func;
       try {
-         $body();
+         $func();
       }
       catch (\Exception $e) {
          $this->fail($e);
@@ -241,6 +257,7 @@ class Expect {
    }
    
    function be_type($expected) {
+      $type = gettype($this->actual);
       return array(
          $type === $expected,
          'expected %s to be type %s, was %s',
@@ -325,10 +342,10 @@ class Formatter {
       foreach (runner()->specs as $spec) {
          if ($spec->failed()) {
             $failed += 1;
-            foreach ($spec->exceptions as $e) {
+            foreach ($spec->failures as $failure) {
                echo "\nFAILURE:\n";
-               echo $e->getMessage()."\n";
-               echo $e->getTraceAsString()."\n";
+               echo $failure->getMessage()."\n";
+               echo $failure->getTraceAsString()."\n";
             }
          }
          else

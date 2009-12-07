@@ -65,6 +65,7 @@ Todo
 * Need a script to run a folder of tests
 * Need to add more matchers
 * Need to improve failure output
+* Treat PHP errors/notices/warnings as exceptions
 
 License
 =======
