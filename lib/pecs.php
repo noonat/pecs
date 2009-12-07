@@ -2,8 +2,6 @@
 
 namespace pecs;
 
-// vomit worthy, but no other way to define in
-// the global namespace without a second file
 $code = <<<'EOC'
 function describe($text, $func) {
    return \pecs\runner()->describe($text, $func);
@@ -15,21 +13,24 @@ function expect($actual) {
    return \pecs\runner()->expect($actual);
 }
 EOC;
-if (getenv('PECS_NO_GLOBALS') != '1') eval($code); // global aliases
-eval("namespace pecs;\n$code"); // local aliases
+// eval is the only way to execute within global namespace
+if (constant('\PECS_GLOBALS') !== false) eval($code); // global ns aliases
+eval("namespace pecs;\n$code"); // local ns aliases
 
+/// Run the tests.
 function run($formatter=null) {
    return runner()->run($formatter);
 }
 
+/// Return the Runner singleton, or set it to a new object.
 function runner($newRunner=null) {
    static $runner=null;
-   if (!$runner || $newRunner) {
+   if (!$runner || $newRunner)
       $runner = $newRunner ?: new Runner();
-   }
    return $runner;
 }
 
+/// Keeps track of things and does the heavy lifting.
 class Runner {
    function __construct() {
       $this->formatter = new Formatter();
@@ -59,9 +60,8 @@ class Runner {
    }
 
    function run($formatter=null) {
-      if (!is_null($formatter)) {
+      if (!is_null($formatter))
          $this->formatter = $formatter;
-      }
       $this->formatter->before();
       foreach ($this->suites as $suite) {
          $this->formatter->beforeSuite($suite);
@@ -77,6 +77,7 @@ class Runner {
    }
 }
 
+/// Contains one or more specs.
 class Suite {
    function __construct($description=null, $body=null, $parent=null) {
       $this->specs = array();
@@ -98,6 +99,7 @@ class Suite {
    }
 }
 
+/// An actual test case.
 class Spec extends Suite {
    public $exceptions = array();
    
@@ -107,9 +109,8 @@ class Spec extends Suite {
    }
    
    function fail($exception) {
-      if (is_string($exception)) {
+      if (is_string($exception))
          $exception = new \Exception($exception);
-      }
       $this->exceptions[] = $exception;
    }
    
@@ -132,6 +133,9 @@ class Spec extends Suite {
    }
 }
 
+/// This is the sauce. expect($foo) returns one of these objects, and the
+/// __call handler transforms the spec style ->not_to_be_false() into a call
+/// to appropriate method.
 class Expect {
    function __construct($actual, $spec) {
       $this->actual = $actual;
@@ -144,9 +148,10 @@ class Expect {
          $method = $matches[4];
          $expectedResult = empty($matches[2]);
       }
-      if (!method_exists($this, $method)) {
-         throw new \Exception("Unknown assertion \"{$method}\"");
-      }
+      if (isset($this->_aliases[$method]))
+         $method = $this->_aliases[$method];
+      if (!method_exists($this, $method))
+         throw new \Exception("Unknown expect assertion \"{$method}\"");
       $this->_assert($method, $args, $expectedResult);
       return $this;
    }
@@ -154,9 +159,8 @@ class Expect {
    function _assert($method, $args, $expectedResult) {
       $values = (array)call_user_func_array(array($this, $method), $args);
       $result = array_shift($values);
-      if ($result != $expectedResult) {
+      if ($result != $expectedResult)
          $this->_fail($method, $args, $result, $expectedResult, $values);
-      }
    }
    
    function _fail($method, $args, $result, $expectedResult, $values) {
@@ -164,12 +168,22 @@ class Expect {
          $format = 'expected %s to '.str_replace('_', ' ', $method).' %s';
          $values = array_merge(array($this->actual), $args);
       }
-      else {
+      else
          $format = array_shift($values);
-      }
       array_walk($values, function(&$v) { $v = var_export($v, true); });
       $this->spec->fail(new \Exception(vsprintf($format, $values)));
    }
+   
+   /// Matcher aliases
+   public $_aliases = array(
+      'be' => 'equal',
+      'be_an' => 'be_a',
+      'have_count' => 'have_length',
+      'have_count_within' => 'have_length_within',
+      'throw' => 'throw_error',
+   );
+   
+   /// New matchers can be defined by adding a function below.
    
    function equal($expected) {
       return $this->actual === $expected;
@@ -233,16 +247,17 @@ class Expect {
          $this->actual, $expected, $type);
    }
    
-   function have_count($expected) {
-      return count($this->actual) === $expected;
+   function have_length($expected) {
+      $n = is_string($this->actual) ? strlen($this->actual) : count($this->actual);
+      return $n === $expected;
    }
    
-   function have_count_within($min, $max) {
-      $count = count($this->actual);
+   function have_length_within($min, $max) {
+      $n = is_string($this->actual) ? strlen($this->actual) : count($this->actual);
       return array(
-         $count >= $min && $count <= $max, $count,
-         'expected %s have count within %d and %d, was %d',
-         $this->actual, $min, $max, $count);
+         $n >= $min && $n <= $max, $n,
+         'expected %s to have count within %d and %d, was %d',
+         $this->actual, $min, $max, $n);
    }
 }
 
@@ -270,10 +285,10 @@ class Formatter {
    }
    
    function beforeSuite($suite) {
-      if ($suite instanceof Runner) return;
-      if (!empty($suite->specs)) {
+      if ($suite instanceof Runner)
+         return;
+      if (!empty($suite->specs))
          echo $this->color("\n{$suite->description}\n", 'bold');
-      }
    }
    
    function beforeSpec($spec) {
@@ -281,12 +296,10 @@ class Formatter {
    }
    
    function afterSpec($spec) {
-      if ($spec->passed()) {
+      if ($spec->passed())
          echo $this->color("pass\n", 'green');
-      }
-      else {
+      else
          echo $this->color("fail   \n", 'red');
-      }
    }
    
    function afterSuite($suite) {
@@ -303,9 +316,8 @@ class Formatter {
                echo $e->getTraceAsString()."\n";
             }
          }
-         else {
+         else
             $passed += 1;
-         }
       }
       $this->endTime = microtime(true);
       $this->runTime = $this->endTime - $this->startTime;
