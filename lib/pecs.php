@@ -2,7 +2,7 @@
 
 namespace pecs;
 
-// vomit worth, but no other way to define in
+// vomit worthy, but no other way to define in
 // the global namespace without a second file
 $code = <<<'EOC'
 function describe($text, $func) {
@@ -15,7 +15,7 @@ function expect($actual) {
    return \pecs\runner()->expect($actual);
 }
 EOC;
-eval($code); // global aliases
+if (getenv('PECS_NO_GLOBALS') != '1') eval($code); // global aliases
 eval("namespace pecs;\n$code"); // local aliases
 
 function run($formatter=null) {
