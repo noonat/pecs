@@ -1,9 +1,11 @@
-work it.
-========
+magnificent pecs.
+=================
 
-pecs is a tiny BDD library for PHP 5.3.
+pecs is a tiny behavior-driven development library for PHP 5.3, a la
+[RSpec](http://github.com/dchelimsky/rspec) or
+[JSpec](http://github.com/visionmedia/jspec).
 
-To use the [traditional example](http://rspec.info), it works like this:
+To use the traditional example, it works like this:
 
     require "lib/pecs.php";
     require "bowling.php";
@@ -54,9 +56,9 @@ The output looks something like this:
 Credit
 ======
 
-pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec). The
-only reason pecs exists is because I got tired of switching between PHPUnit and
-JSpec style tests. GO JSPEC!
+pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec)'s
+grammar-less syntax, and was written because I don't want to have to switch
+gears so much when going between PHP and JSpec testing.
 
 Todo
 ====
@@ -72,10 +74,21 @@ License
 
 (The MIT License)
 
-Copyright ©2009 Nathan Ostgard <no@nathanostgard.com>
+Copyright ©2009 noonat
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the ‘Software’), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the ‘Software’), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ‘AS IS’, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED ‘AS IS’, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
