@@ -16,7 +16,7 @@ function it($description, $func) {
     return \pecs\runner()->it($description, $func);
 }
 function expect($actual) {
-    return \pecs\runner()->expect($actual);
+    return \pecs\runner()->spec->expect($actual);
 }
 EOC;
 // eval is the only way to execute within global namespace
@@ -54,10 +54,6 @@ class Runner {
         $func();
         $this->suite = $suite->parent;
         return $suite;
-    }
-
-    function expect($actualValue) {
-        return new Expect($actualValue, $this->spec);
     }
 
     function hook($hook, $func) {
@@ -156,11 +152,16 @@ class Suite {
 
 /// An actual test case.
 class Spec extends Suite {
+    public $assertions = 0;
     public $failures = array();
     
     function __construct($description=null, $func=null, $parent=null) {
         parent::__construct($description, $func, $parent);
         $this->description = $description;
+    }
+    
+    function expect($actualValue) {
+        return new Expect($actualValue, $this);
     }
     
     function fail($failure) {
@@ -180,7 +181,7 @@ class Spec extends Suite {
     function run($scope=array()) {
         $func = $this->func;
         try {
-            $func($scope);
+            $func($scope, $this);
         }
         catch (\Exception $e) {
             $this->fail($e);
@@ -212,6 +213,7 @@ class Expect {
     }
     
     function _assert($method, $args, $expectedResult) {
+        $this->spec->assertions += 1;
         $values = (array)call_user_func_array(array($this, $method), $args);
         $result = array_shift($values);
         if ($result != $expectedResult)
@@ -223,20 +225,45 @@ class Expect {
             $format = 'expected %s to '.str_replace('_', ' ', $method);
             $values = array($this->actual);
             if (!empty($args)) {
-                $format .=  ' %s';
+                $format .= ' %s';
                 $values[] = $args[0];
             }
         }
         else
             $format = array_shift($values);
-        array_walk($values, function(&$v) { $v = var_export($v, true); });
-        $this->spec->fail(new \Exception(vsprintf($format, $values)));
+        if (!empty($values)) {
+            array_walk($values, function(&$v) { $v = Expect::_export($v); });
+            $message = vsprintf($format, $values);
+        }
+        else
+            $message = $format;
+        $this->spec->fail(new \Exception($message));
+    }
+    
+    static function _export($var) {
+        if (is_array($var)) {
+            $pairs = array();
+            foreach ($var as $key=>$value)
+                $pairs[] = var_export($key, true).' => '.static::_export($value);
+            return 'array('.implode(', ', $pairs).')';
+        }
+        else if (is_null($var)) {
+            return 'null';
+        }
+        else if (is_object($var)) {
+            $var = var_export($var, true);
+            return preg_replace(array('~array\(\s*\)~', '~::__set_state~'),
+                                array('array()', ''), $var);
+        }
+        else {
+            return var_export($var, true);
+        }
     }
     
     /// Matcher aliases
     public $_aliases = array(
-        'be' => 'equal',
         'be_an' => 'be_a',
+        'equal' => 'be',
         'have_count' => 'have_length',
         'have_count_within' => 'have_length_within',
         'throw' => 'throw_error',
@@ -244,7 +271,7 @@ class Expect {
     
     /// New matchers can be defined by adding a function below.
     
-    function equal($expected) {
+    function be($expected) {
         return $this->actual === $expected;
     }
     
@@ -265,22 +292,23 @@ class Expect {
     }
     
     function be_within($min, $max) {
-        return $this->actual >= $min && $this->actual <= $max;
+        return array(
+            $this->actual >= $min && $this->actual <= $max,
+            'expected %s to be within %s and %s', $this->actual, $min, $max);
     }
     
     function be_a($expected) {
         $class = get_class($this->actual);
         return array(
             $class === $expected,
-            'expected %s to be class %s', $class, $expected);
+            "expected $class to be class $expected");
     }
     
     function be_an_instance_of($expected) {
         $class = get_class($this->actual);
         return array(
             $this->actual instanceof $expected,
-            'expected %s to be an instance of %s, was %s',
-            $this->actual, $expected, $class);
+            "expected $class to be an instance of $expected");
     }
     
     function be_null() {
@@ -300,38 +328,61 @@ class Expect {
     }
     
     function be_type($expected) {
-        $type = gettype($this->actual);
+        $expected = strtolower($expected);
+        $type = strtolower(gettype($this->actual));
         return array(
             $type === $expected,
-            'expected %s to be type %s, was %s',
-            $this->actual, $expected, $type);
+            "expected %s to be type $expected, was $type", $this->actual);
     }
     
     function have_length($expected) {
-        $n = is_string($this->actual) ? strlen($this->actual) : count($this->actual);
-        return $n === $expected;
+        if (is_string($this->actual))
+            $length = strlen($this->actual);
+        else
+            $length = count($this->actual);
+        return array(
+            $length === $expected,
+            'expected %s to have length %d, was %d',
+            $this->actual, $expected, $length);
     }
     
     function have_length_within($min, $max) {
-        $n = is_string($this->actual) ? strlen($this->actual) : count($this->actual);
+        if (is_string($this->actual))
+            $length = strlen($this->actual);
+        else
+            $length = count($this->actual);
         return array(
-            $n >= $min && $n <= $max, $n,
-            'expected %s to have count within %d and %d, was %d',
-            $this->actual, $min, $max, $n);
+            $length >= $min && $length <= $max,
+            'expected %s to have length within %d and %d, was %d',
+            $this->actual, $min, $max, $length);
     }
     
     function throw_error($className=null, $message=null) {
         try {
             $func = $this->actual;
             $func();
-            return false;
+            return array(
+                false,
+                $className ?
+                    "expected $className to be thrown, but was not" :
+                    'expected exception to be thrown, but was not');
         }
         catch (\Exception $e) {
-            if ((!$className || $e instanceof $className) &&
-                (!$message || $e->getMessage() == $message)) {
-                return true;
+            if ($className && !($e instanceof $className)) {
+                $actualClassName = get_class($e);
+                return array(
+                    false,
+                    "expected $className to be thrown, " .
+                    "but got $actualClassName instead");
             }
-            throw $e;
+            if ($message && $e->getMessage() != $message) {
+                return array(
+                    false,
+                    "expected thrown exception to have message %s, " .
+                    "but had message %s",
+                    $message, $e->getMessage());
+            }
+            return true;
         }
     }
 }
@@ -384,7 +435,9 @@ class Formatter {
         $passed = $failed = 0;
         foreach (runner()->specs as $spec) {
             if ($spec->failed()) {
-                $failed += 1;
+                $count = count($spec->failures);
+                $failed += $count;
+                $passed += $spec->assertions - $count;
                 foreach ($spec->failures as $failure) {
                     echo "\nFAILURE:\n";
                     echo $failure->getMessage()."\n";
@@ -392,7 +445,7 @@ class Formatter {
                 }
             }
             else
-                $passed += 1;
+                $passed += $spec->assertions;
         }
         $this->endTime = microtime(true);
         $this->runTime = $this->endTime - $this->startTime;
