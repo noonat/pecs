@@ -220,8 +220,12 @@ class Expect {
    
    function _fail($method, $args, $result, $expectedResult, $values) {
       if (empty($values)) {
-         $format = 'expected %s to '.str_replace('_', ' ', $method).' %s';
-         $values = array_merge(array($this->actual), $args);
+         $format = 'expected %s to '.str_replace('_', ' ', $method);
+         $values = array($this->actual);
+         if (!empty($args)) {
+            $format .=  ' %s';
+            $values[] = $args[0];
+         }
       }
       else
          $format = array_shift($values);
