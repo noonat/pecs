@@ -4,10 +4,10 @@ namespace pecs;
 
 $code = <<<'EOC'
 function after_each($func) {
-   return \pecs\runner()->after_each($func);
+   return \pecs\runner()->suite->hook('after_each', $func);
 }
 function before_each($func) {
-   return \pecs\runner()->after_each($func);
+   return \pecs\runner()->suite->hook('before_each', $func);
 }
 function describe($description, $func) {
    return \pecs\runner()->describe($description, $func);
@@ -40,19 +40,11 @@ function runner($newRunner=null) {
 class Runner {
    function __construct() {
       $this->formatter = new Formatter();
-      $this->hooks = array();
+      $this->hooks = array('after_each'=>array(), 'before_each'=>array());
       $this->spec = null;
       $this->specs = array();
       $this->suite = null;
       $this->suites = array();
-   }
-   
-   function after_each($func) {
-      $this->hooks['after_each'][$this->suite->id] = $func;
-   }
-   
-   function before_each($func) {
-      $this->hooks['before_each'][$this->suite->id] = $func;
    }
    
    function describe($description, $func) {
@@ -64,14 +56,20 @@ class Runner {
       return $suite;
    }
 
+   function expect($actualValue) {
+      return new Expect($actualValue, $this->spec);
+   }
+
+   function hook($hook, $func) {
+      if (!isset($this->hooks[$hook]))
+         $this->hooks[$hook] = array();
+      $this->hooks[$hook][] = $func;
+   }
+   
    function it($description, $func) {
       $spec = new Spec($description, $func, $this->suite);
       $this->specs[] = $spec;
       return $spec;
-   }
-
-   function expect($actualValue) {
-      return new Expect($actualValue, $this->spec);
    }
 
    function run($formatter=null) {
@@ -83,18 +81,32 @@ class Runner {
          foreach ($suite->specs as $spec) {
             $this->spec = $spec;
             $this->formatter->beforeSpec($spec);
-            $spec->run();
+            $scope = $spec->runHooks('before_each');
+            $spec->run($scope);
+            $spec->runHooks('after_each', $scope);
             $this->formatter->afterSpec($spec);
          }
          $this->formatter->afterSuite($suite);
       }
       $this->formatter->after();
    }
+
+   function runHooks($hook, $scope=array()) {
+      if (isset($this->hooks[$hook])) {
+         foreach ($this->hooks[$hook] as $func) {
+            $newScope = $func($scope);
+            if (!is_null($newScope))
+               $scope = $newScope;
+         }
+      }
+      return $scope;
+   }
 }
 
 /// Contains one or more specs.
 class Suite {
    function __construct($description=null, $func=null, $parent=null) {
+      $this->hooks = array();
       $this->id = spl_object_hash($this);
       $this->specs = array();
       $this->suites = array();
@@ -110,9 +122,36 @@ class Suite {
       }
    }
    
+   function hook($hook, $func) {
+      if (!isset($this->hooks[$hook]))
+         $this->hooks[$hook] = array();
+      $this->hooks[$hook][] = $func;
+   }
+   
+   function parents() {
+      $parents = array();
+      for ($parent=$this->parent; $parent; $parent=$parent->parent) {
+         array_unshift($parents, $parent);
+      }
+      return $parents;
+   }
+   
    function push($child) {
       $child instanceof Spec ? $this->specs[]=$child : $this->suites[]=$child;
    }
+
+   function runHooks($hook, $scope=array()) {
+      if ($this->parent)
+         $scope = $this->parent->runHooks($hook, $scope);
+      if (isset($this->hooks[$hook])) {
+         foreach ($this->hooks[$hook] as $func) {
+            $newScope = $func($scope, $this);
+            if (!is_null($newScope))
+               $scope = $newScope;
+         }
+      }
+      return $scope;
+   }   
 }
 
 /// An actual test case.
@@ -138,10 +177,10 @@ class Spec extends Suite {
       return empty($this->failures);
    }
    
-   function run() {
+   function run($scope=array()) {
       $func = $this->func;
       try {
-         $func();
+         $func($scope);
       }
       catch (\Exception $e) {
          $this->fail($e);
