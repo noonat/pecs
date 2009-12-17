@@ -63,11 +63,10 @@ gears so much when going between PHP and JSpec testing.
 Todo
 ====
 
-* Add `before`, `before_each`, `after`, and `after_each` hooks
+* Add `before` and `after` hooks
 * Need a script to run a folder of tests
 * Need to add more matchers
 * Need to improve failure output
-* Treat PHP errors/notices/warnings as exceptions
 
 License
 =======
