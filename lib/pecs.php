@@ -2,6 +2,11 @@
 
 namespace pecs;
 
+function errorToException($errno, $errstr, $errfile, $errline, $errcontext) {
+    throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+}
+set_error_handler('\pecs\errorToException', E_ALL);
+
 $code = <<<'EOC'
 function after_each($func) {
     return \pecs\runner()->suite->hook('after_each', $func);
