@@ -81,5 +81,35 @@ describe("pecs", function() {
             expect($expect->actual)->to_be('foo');
             expect($expect->spec)->to_be($spec);
         });
+        
+        it('should pass if no assertion is expected', function(){
+            $spec = new pecs\Spec(null, function($s) {
+                $s->expectAssertions()->to_be(0);
+            });
+            $spec->run($spec);
+            expect($spec->passed())->to_be_true();
+            expect($spec->failed())->to_be_false();
+        });
+        
+        it('should pass if some assertions are expected', function(){
+            $spec = new pecs\Spec(null, function($s) {
+                $s->expect(0)->to_be(0);
+                $s->expect(true)->to_be(true);
+                $s->expectAssertions()->to_be(2);
+            });
+            $spec->run($spec);
+            expect($spec->passed())->to_be_true();
+            expect($spec->failed())->to_be_false();
+        });
+        
+        it('should fail if assertions expectation is not fulfilled', function(){
+            $spec = new pecs\Spec(null, function($s) {
+                $s->expectAssertions()->to_be(1);
+            });
+            $spec->run($spec);
+            expect($spec->passed())->to_be_false();
+            expect($spec->failed())->to_be_true();
+            expect($spec->failures)->to_have_count(1);
+        });
     });
 });
