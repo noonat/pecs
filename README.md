@@ -1,4 +1,4 @@
-magnificent pecs.
+magnificent pecs. [![Build Status](https://secure.travis-ci.org/phuedx/pecs.png?branch=develop)](http://travis-ci.org/phuedx/pecs)
 =================
 
 pecs is a tiny behavior-driven development library for PHP 5.3, a la
