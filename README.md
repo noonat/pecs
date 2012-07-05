@@ -64,7 +64,6 @@ Todo
 ====
 
 * Add `before` and `after` hooks
-* Need a script to run a folder of tests
 * Need to add more matchers
 * Need to improve failure output
 
