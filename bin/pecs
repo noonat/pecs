@@ -32,3 +32,11 @@ foreach ($specs as $spec) {
 }
 
 \pecs\run();
+
+foreach (\pecs\runner()->specs as $spec) {
+    if ($spec->failed()) {
+        exit(1);
+    }
+}
+
+exit(0);
