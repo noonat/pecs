@@ -57,7 +57,7 @@ describe("pecs", function() {
             expect(function() { throw new InvalidArgumentException('FAIL!'); })
                 ->to_throw('InvalidArgumentException', 'FAIL!');
         });
-        
+
         it("should fail incorrect expectations", function() {
             $expects = array(
                 // all of these should fail
@@ -156,6 +156,27 @@ describe("pecs", function() {
                 expect($spec->failures)->to_have_count(1);
                 expect($spec->failures[0]->getMessage())->to_be($message);
             }
+        });
+
+        it("should allow pecs\watched() to observe a function", function() {
+            $watched = pecs\watched(function($foo, $bar) {
+                expect($foo)->to_be(1);
+                expect($bar)->to_be(2);
+                return $foo + $bar;
+            });
+            expect($watched)->not_to_have_been_called();
+            expect($watched(1, 2))->to_be(3);
+            expect($watched)->to_have_been_called();
+            expect($watched)->to_have_been_called(1);
+            expect($watched(1, 2))->to_be(3);
+            expect($watched)->to_have_been_called();
+            expect($watched)->to_have_been_called(2);
+        });
+
+        it("should fail if pecs\watched() is passed a non-callable", function() {
+            expect(function() {
+                pecs\watched(1);
+            })->to_throw('Exception', 'pecs\\watched() must be passed a function');
         });
     });
 });

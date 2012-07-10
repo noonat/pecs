@@ -44,6 +44,30 @@ function runner($newRunner=null) {
     return $runner;
 }
 
+function watched($func) {
+    if (!is_callable($func)) {
+        throw new \Exception('pecs\watched() must be passed a function');
+    }
+    return new Watched($func);
+}
+
+/// Wraps around a function and tracks when it is called.
+class Watched {
+    public $invokeArgs = array();
+    public $invokeCount = 0;
+
+    function __construct($func) {
+        $this->func = $func;
+    }
+
+    function __invoke() {
+        $args = func_get_args();
+        $this->invokeCount += 1;
+        $this->invokeArgs[] = $args;
+        return call_user_func_array($this->func, $args);
+    }
+}
+
 /// Keeps track of things and does the heavy lifting.
 class Runner {
     function __construct() {
@@ -398,6 +422,27 @@ class Expect {
                     $message, $e->getMessage());
             }
             return true;
+        }
+    }
+
+    function have_been_called($expected=null) {
+        if (!($this->actual instanceof Watched)) {
+            $actualClassName = get_class($e);
+            return array(
+                false,
+                "have_been_called() can only be used with pecs\watched()");
+        }
+        $actual = $this->actual->invokeCount;
+        if (is_null($expected)) {
+            return array(
+                $actual > 0,
+                "expected function to have been called, but was not");
+        } else {
+            return array(
+                $expected === $actual,
+                "expected function to have been called %d times, " .
+                "but was called %d times",
+                $expected, $actual);
         }
     }
 }
