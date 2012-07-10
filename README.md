@@ -98,5 +98,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 [rspec]: http://github.com/dchelimsky/rspec
 [jspec]: http://github.com/visionmedia/jspec
-[travis]: http://travis-ci.org/phuedx/pecs
-[travis_image]: https://secure.travis-ci.org/phuedx/pecs.png?branch=master
+[travis]: http://travis-ci.org/noonat/pecs
+[travis_image]: https://secure.travis-ci.org/noonat/pecs.png?branch=master
