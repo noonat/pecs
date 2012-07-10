@@ -23,8 +23,16 @@ if (!file_exists($path)) {
 if (is_file($path)) {
     $specs = array($path);
 } else {
-    $specs = new RecursiveRegexIterator(new RecursiveDirectoryIterator(
-        $path, FilesystemIterator::CURRENT_AS_PATHNAME), '/\.php$/');
+    $specs = array();
+    $files = new RecursiveDirectoryIterator($path);
+    $files = new RecursiveIteratorIterator(
+        $files, RecursiveIteratorIterator::CHILD_FIRST);
+    foreach ($files as $file) {
+        $pathname = $file->getPathname();
+        if (preg_match('/\.php$/', $pathname)) {
+            $specs[] = $pathname;
+        }
+    }
 }
 
 foreach ($specs as $spec) {
