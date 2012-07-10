@@ -6,7 +6,7 @@ class MockRunner extends pecs\Runner {
         $this->runCalls = array();
     }
     
-    function run() {
+    function run($formatter=null) {
         $this->runCalls[] = func_get_args();
     }
 }

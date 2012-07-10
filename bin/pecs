@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../lib/pecs.php';
+
+$cwd = getcwd();
+$path = $cwd  . '/specs';
+
+if (isset($_SERVER['argv'][1])) {
+    $path = $_SERVER['argv'][1];
+}
+
+// Relative path?
+if ($path[0] != '/') {
+    $path = "{$cwd}/{$path}";
+}
+
+if ( ! file_exists($path)) {
+    fwrite(STDERR, "{$message}\n");
+
+    exit(1);
+}
+
+if (is_file($path)) {
+    $specs = array($path);
+} else {
+    $specs = new RecursiveRegexIterator(new RecursiveDirectoryIterator($path, FilesystemIterator::CURRENT_AS_PATHNAME), '/\.php$/');
+}
+
+foreach ($specs as $spec) {
+    require $spec;
+}
+
+\pecs\run();
+
+foreach (\pecs\runner()->specs as $spec) {
+    if ($spec->failed()) {
+        exit(1);
+    }
+}
+
+exit(0);

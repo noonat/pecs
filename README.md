@@ -1,4 +1,4 @@
-magnificent pecs.
+magnificent pecs. [![Build Status](https://secure.travis-ci.org/phuedx/pecs.png?branch=master)](http://travis-ci.org/phuedx/pecs)
 =================
 
 pecs is a tiny behavior-driven development library for PHP 5.3, a la
@@ -64,7 +64,6 @@ Todo
 ====
 
 * Add `before` and `after` hooks
-* Need a script to run a folder of tests
 * Need to add more matchers
 * Need to improve failure output
 
