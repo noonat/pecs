@@ -25,8 +25,9 @@ function expect($actual) {
 }
 EOC;
 // eval is the only way to execute within global namespace
-if (!defined('\PECS_GLOBALS') || constant('\PECS_GLOBALS') !== false)
+if (!defined('\PECS_GLOBALS') || constant('\PECS_GLOBALS') !== false) {
     eval($code); // global ns aliases
+}
 eval("namespace pecs;\n$code"); // local ns aliases
 
 /// Run the tests.
@@ -37,8 +38,9 @@ function run($formatter=null) {
 /// Return the Runner singleton, or set it to a new object.
 function runner($newRunner=null) {
     static $runner=null;
-    if (!$runner || $newRunner)
+    if (!$runner || $newRunner) {
         $runner = $newRunner ?: new Runner();
+    }
     return $runner;
 }
 
@@ -63,8 +65,9 @@ class Runner {
     }
 
     function hook($hook, $func) {
-        if (!isset($this->hooks[$hook]))
+        if (!isset($this->hooks[$hook])) {
             $this->hooks[$hook] = array();
+        }
         $this->hooks[$hook][] = $func;
     }
 
@@ -75,8 +78,9 @@ class Runner {
     }
 
     function run($formatter=null) {
-        if (!is_null($formatter))
+        if (!is_null($formatter)) {
             $this->formatter = $formatter;
+        }
         $this->formatter->before();
         foreach ($this->suites as $suite) {
             $this->formatter->beforeSuite($suite);
@@ -97,8 +101,9 @@ class Runner {
         if (isset($this->hooks[$hook])) {
             foreach ($this->hooks[$hook] as $func) {
                 $newScope = $func($scope);
-                if (!is_null($newScope))
+                if (!is_null($newScope)) {
                     $scope = $newScope;
+                }
             }
         }
         return $scope;
@@ -117,16 +122,16 @@ class Suite {
             $this->description = trim($parent->description.' '.$description);
             $this->parent = $parent;
             $this->parent->push($this);
-        }
-        else {
+        } else {
             $this->description = $description;
             $this->parent = null;
         }
     }
 
     function hook($hook, $func) {
-        if (!isset($this->hooks[$hook]))
+        if (!isset($this->hooks[$hook])) {
             $this->hooks[$hook] = array();
+        }
         $this->hooks[$hook][] = $func;
     }
 
@@ -143,13 +148,15 @@ class Suite {
     }
 
     function runHooks($hook, $scope=array()) {
-        if ($this->parent)
+        if ($this->parent) {
             $scope = $this->parent->runHooks($hook, $scope);
+        }
         if (isset($this->hooks[$hook])) {
             foreach ($this->hooks[$hook] as $func) {
                 $newScope = $func($scope, $this);
-                if (!is_null($newScope))
+                if (!is_null($newScope)) {
                     $scope = $newScope;
+                }
             }
         }
         return $scope;
@@ -171,8 +178,9 @@ class Spec extends Suite {
     }
 
     function fail($failure) {
-        if (is_string($failure))
+        if (is_string($failure)) {
             $failure = new \Exception($failure);
+        }
         $this->failures[] = $failure;
     }
 
@@ -188,8 +196,7 @@ class Spec extends Suite {
         $func = $this->func;
         try {
             $func($scope, $this);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $this->fail($e);
         }
     }
@@ -210,10 +217,12 @@ class Expect {
             $method = $matches[4];
             $expectedResult = empty($matches[2]);
         }
-        if (isset($this->_aliases[$method]))
+        if (isset($this->_aliases[$method])) {
             $method = $this->_aliases[$method];
-        if (!method_exists($this, $method))
+        }
+        if (!method_exists($this, $method)) {
             throw new \Exception("Unknown expectation assertion \"{$method}\"");
+        }
         $this->_assert($method, $args, $expectedResult);
         return $this;
     }
@@ -222,8 +231,9 @@ class Expect {
         $this->spec->assertions += 1;
         $values = (array)call_user_func_array(array($this, $method), $args);
         $result = array_shift($values);
-        if ($result != $expectedResult)
+        if ($result != $expectedResult) {
             $this->_fail($method, $args, $result, $expectedResult, $values);
+        }
     }
 
     function _fail($method, $args, $result, $expectedResult, $values) {
@@ -234,34 +244,32 @@ class Expect {
                 $format .= ' %s';
                 $values[] = $args[0];
             }
-        }
-        else
+        } else {
             $format = array_shift($values);
+        }
         if (!empty($values)) {
             array_walk($values, function(&$v) { $v = Expect::_export($v); });
             $message = vsprintf($format, $values);
-        }
-        else
+        } else {
             $message = $format;
+        }
         $this->spec->fail(new \Exception($message));
     }
 
     static function _export($var) {
         if (is_array($var)) {
             $pairs = array();
-            foreach ($var as $key=>$value)
+            foreach ($var as $key=>$value) {
                 $pairs[] = var_export($key, true).' => '.static::_export($value);
+            }
             return 'array('.implode(', ', $pairs).')';
-        }
-        else if (is_null($var)) {
+        } else if (is_null($var)) {
             return 'null';
-        }
-        else if (is_object($var)) {
+        } else if (is_object($var)) {
             $var = var_export($var, true);
             return preg_replace(array('~array\(\s*\)~', '~::__set_state~'),
                                 array('array()', ''), $var);
-        }
-        else {
+        } else {
             return var_export($var, true);
         }
     }
@@ -342,10 +350,11 @@ class Expect {
     }
 
     function have_length($expected) {
-        if (is_string($this->actual))
+        if (is_string($this->actual)) {
             $length = strlen($this->actual);
-        else
+        } else {
             $length = count($this->actual);
+        }
         return array(
             $length === $expected,
             'expected %s to have length %d, was %d',
@@ -353,10 +362,11 @@ class Expect {
     }
 
     function have_length_within($min, $max) {
-        if (is_string($this->actual))
+        if (is_string($this->actual)) {
             $length = strlen($this->actual);
-        else
+        } else {
             $length = count($this->actual);
+        }
         return array(
             $length >= $min && $length <= $max,
             'expected %s to have length within %d and %d, was %d',
@@ -372,8 +382,7 @@ class Expect {
                 $className ?
                     "expected $className to be thrown, but was not" :
                     'expected exception to be thrown, but was not');
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             if ($className && !($e instanceof $className)) {
                 $actualClassName = get_class($e);
                 return array(
@@ -418,10 +427,12 @@ class Formatter {
     }
 
     function beforeSuite($suite) {
-        if ($suite instanceof Runner)
+        if ($suite instanceof Runner) {
             return;
-        if (!empty($suite->specs))
+        }
+        if (!empty($suite->specs)) {
             echo $this->color("\n{$suite->description}\n", 'bold');
+        }
     }
 
     function beforeSpec($spec) {
@@ -429,10 +440,11 @@ class Formatter {
     }
 
     function afterSpec($spec) {
-        if ($spec->passed())
+        if ($spec->passed()) {
             echo $this->color("pass\n", 'green');
-        else
+        } else {
             echo $this->color("fail\n", 'red');
+        }
     }
 
     function afterSuite($suite) {
@@ -450,9 +462,9 @@ class Formatter {
                     echo $failure->getMessage()."\n";
                     echo $failure->getTraceAsString()."\n";
                 }
-            }
-            else
+            } else {
                 $passed += $spec->assertions;
+            }
         }
         $this->endTime = microtime(true);
         $this->runTime = $this->endTime - $this->startTime;
