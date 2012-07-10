@@ -464,3 +464,51 @@ class Formatter {
     }
 }
 
+class HtmlFormatter extends Formatter
+{
+  static $colors = array(
+    'black' => '#000000',
+    'white' => '#ffffff',
+    'red'   => '#ff2222',
+    'green' => '#33ee33',
+    'blue'  => '#0000ff'
+  );
+  
+  function color($string, $color)
+  {
+    if($color == 'bold')
+      $style = "font-weight: bold;";
+    else 
+      $style = "color:". self::$colors[$color];
+    $ret = "<span style=\"{$style}\">{$string}</span>";
+    $ret = nl2br($ret);
+    return $ret;
+  }
+
+   function after() {
+      $passed = $failed = 0;
+      foreach (runner()->specs as $spec) {
+          if ($spec->failed()) {
+              $count = count($spec->failures);
+              $failed += $count;
+              $passed += $spec->assertions - $count;
+              foreach ($spec->failures as $failure) {
+                  echo nl2br("\nFAILURE:\n");
+                  echo nl2br($failure->getMessage()."\n");
+                  echo nl2br($failure->getTraceAsString()."\n");
+              }
+          }
+          else
+              $passed += $spec->assertions;
+      }
+      $this->endTime = microtime(true);
+      $this->runTime = $this->endTime - $this->startTime;
+      echo "\nFinished in ".number_format($this->runTime, 4)." seconds\n\n";
+      echo $this->color('Passed: ', 'bold');
+      echo $this->color($passed, 'green');
+      echo $this->color(' Failed: ', 'bold');
+      echo $this->color($failed, 'red');
+      echo "\n\n";
+  }
+  
+}
