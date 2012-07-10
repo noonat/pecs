@@ -61,8 +61,9 @@ between PHP and JSpec testing.
 
 Contributors:
 
-* [Nathan Ostgard](https://github.com/noonat)
-* [Sam Smith](https://github.com/phuedx)
+* [noonat](https://github.com/noonat)
+* [phuedx](https://github.com/phuedx)
+* [sorcerershell](https://github.com/sorcerershell)
 
 Todo
 ====
