@@ -23,6 +23,9 @@ function it($description, $func) {
 function expect($actual) {
     return \pecs\runner()->spec->expect($actual);
 }
+function expectAssertions() {
+    return \pecs\runner()->spec->expectAssertions();
+}
 EOC;
 // eval is the only way to execute within global namespace
 if (!defined('\PECS_GLOBALS') || constant('\PECS_GLOBALS') !== false)
@@ -168,6 +171,10 @@ class Spec extends Suite {
     
     function expect($actualValue) {
         return new Expect($actualValue, $this);
+    }
+    
+    function expectAssertions() {
+        return $this->expect($this->assertions);
     }
     
     function fail($failure) {
