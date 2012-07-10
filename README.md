@@ -1,15 +1,14 @@
-magnificent pecs. [![Build Status](https://secure.travis-ci.org/phuedx/pecs.png?branch=master)](http://travis-ci.org/phuedx/pecs)
+magnificent pecs. [![Build Status][travis_image]][travis]
 =================
 
 pecs is a tiny behavior-driven development library for PHP 5.3, a la
-[RSpec](http://github.com/dchelimsky/rspec) or
-[JSpec](http://github.com/visionmedia/jspec).
+[RSpec][rspec] or [JSpec][jspec].
 
 To use the traditional example, it works like this:
 
     require "lib/pecs.php";
     require "bowling.php";
-    
+
     describe("Bowling", function() {
       it("should score 0 for a gutter game", function() {
         $bowling = new Bowling();
@@ -18,22 +17,22 @@ To use the traditional example, it works like this:
         }
         expect($bowling->score)->to_equal(0);
       });
-      
+
       it("should get drinks for free just for being here", function() {
         $bowling = new Bowling();
         expect($bowling->score)->to_equal(42);
       });
     });
-    
+
     \pecs\run();
 
 The output looks something like this:
 
-    $ php test_bowling.php 
+    $ php test_bowling.php
 
     Bowling
     - should score 0 for a gutter game: pass
-    - should get drinks for free just for being here: fail	
+    - should get drinks for free just for being here: fail
 
     FAILURE:
     expected 0 to equal 42
@@ -56,9 +55,14 @@ The output looks something like this:
 Credit
 ======
 
-pecs is greatly inspired by [JSpec](http://github.com/visionmedia/jspec)'s
-grammar-less syntax, and was written because I don't want to have to switch
-gears so much when going between PHP and JSpec testing.
+pecs is greatly inspired by [JSpec][jspec]'s grammar-less syntax, and was
+written because I don't want to have to switch gears so much when going
+between PHP and JSpec testing.
+
+Contributors:
+
+* [Nathan Ostgard](https://github.com/noonat)
+* [Sam Smith](https://github.com/phuedx)
 
 Todo
 ====
@@ -90,3 +94,8 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+[rspec]: http://github.com/dchelimsky/rspec
+[jspec]: http://github.com/visionmedia/jspec
+[travis]: http://travis-ci.org/phuedx/pecs
+[travis_image]: https://secure.travis-ci.org/phuedx/pecs.png?branch=master
