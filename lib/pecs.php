@@ -398,6 +398,9 @@ class Expect {
     }
 
     function throw_error($className=null, $message=null) {
+        if(!is_callable($this->actual)){
+            throw new \Exception("throw_error() can only be used with callables");
+        }
         try {
             $func = $this->actual;
             $func();
@@ -427,9 +430,7 @@ class Expect {
 
     function have_been_called($expected=null) {
         if (!($this->actual instanceof Watched)) {
-            $actualClassName = get_class($e);
-            return array(
-                false,
+            throw new \Exception(
                 "have_been_called() can only be used with pecs\watched()");
         }
         $actual = $this->actual->invokeCount;
@@ -444,6 +445,33 @@ class Expect {
                 "but was called %d times",
                 $expected, $actual);
         }
+    }
+
+    function have_been_called_with(){
+        if (!($this->actual instanceof Watched)) {
+            throw new \Exception(
+                "have_been_called_with() can only be used with pecs\watched()");
+        }
+        $expectedArgs = func_get_args();
+        foreach ($this->actual->invokeArgs as $actualArgs) {
+            if($expectedArgs === $actualArgs){
+                return array(true,
+                    "expected function not to have been called with %s, but was",
+                    $expectedArgs);
+            }
+        }
+        $format = "expected function to have been called with %s, but was ";
+        if(count($this->actual->invokeArgs) == 0){
+            $format .= "not";
+        } else {
+            $format .= "called with [" .
+                str_repeat("%s, ", count($this->actual->invokeArgs) - 1) .
+                "%s]";
+        }
+        return array_merge(
+            array(false, $format, $expectedArgs),
+            $this->actual->invokeArgs
+        );
     }
 }
 
