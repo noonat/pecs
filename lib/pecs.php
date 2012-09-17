@@ -398,6 +398,9 @@ class Expect {
     }
 
     function throw_error($className=null, $message=null) {
+        if(!is_callable($this->actual)){
+            throw new \Exception("throw_error() can only be used with callables");
+        }
         try {
             $func = $this->actual;
             $func();
@@ -427,8 +430,7 @@ class Expect {
 
     function have_been_called($expected=null) {
         if (!($this->actual instanceof Watched)) {
-            return array(
-                false,
+            throw new \Exception(
                 "have_been_called() can only be used with pecs\watched()");
         }
         $actual = $this->actual->invokeCount;
@@ -447,8 +449,7 @@ class Expect {
 
     function have_been_called_with(){
         if (!($this->actual instanceof Watched)) {
-            return array(
-                false,
+            throw new \Exception(
                 "have_been_called_with() can only be used with pecs\watched()");
         }
         $expectedArgs = func_get_args();

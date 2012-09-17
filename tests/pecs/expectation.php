@@ -215,5 +215,21 @@ describe("pecs", function() {
             expect($watched)->to_have_been_called_with(array(0 => 'foo', 10 => 'bar'));
             expect($watched)->not_to_have_been_called_with(array('foo', 'bar'));
         });
+
+        it("should throw exception if throw_error() matcher is used with non-callable", function(){
+            expect(function(){
+                    expect(1234)->to_throw();
+                })->to_throw('Exception', 'throw_error() can only be used with callables');
+        });
+
+        it("should throw exception if have_been_called() and have_been_called_with() " .
+            "are used without an instance of pecs\\Watched", function(){
+            expect(function(){
+                    expect(1234)->to_have_been_called();
+                })->to_throw('Exception', 'have_been_called() can only be used with pecs\watched()');
+            expect(function(){
+                    expect(1234)->to_have_been_called_with();
+                })->to_throw('Exception', 'have_been_called_with() can only be used with pecs\watched()');
+        });
     });
 });
