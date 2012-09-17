@@ -427,7 +427,6 @@ class Expect {
 
     function have_been_called($expected=null) {
         if (!($this->actual instanceof Watched)) {
-            $actualClassName = get_class($e);
             return array(
                 false,
                 "have_been_called() can only be used with pecs\watched()");
