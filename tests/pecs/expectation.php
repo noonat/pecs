@@ -148,6 +148,21 @@ describe("pecs", function() {
                       ->to_throw('LogicException', 'FAIL!'); },
                 "expected thrown exception to have message 'FAIL!', " .
                 "but had message 'FIAL!'",
+                function($s) {
+                    $watched = pecs\watched(function(){});
+                    $watched(1);
+                    $watched(2);
+                    $s->expect($watched)->to_have_been_called_with(3);
+                },
+                "expected function to have been called with array(0 => 3), but was " .
+                "called with [array(0 => 1), array(0 => 2)]",
+                function($s) {
+                    $watched = pecs\watched(function(){});
+                    $watched(1);
+                    $watched(2);
+                    $s->expect($watched)->not_to_have_been_called_with(2);
+                },
+                "expected function not to have been called with array(0 => 2), but was",
             );
             foreach (array_chunk($expects, 2) as $expect) {
                 list($func, $message) = $expect;
@@ -177,6 +192,21 @@ describe("pecs", function() {
             expect(function() {
                 pecs\watched(1);
             })->to_throw('Exception', 'pecs\\watched() must be passed a function');
+        });
+
+        it("should allow pecs\watched() to observe the arguments passed to a function", function(){
+            $watched = pecs\watched(function(){});
+
+            $watched();
+            expect($watched)->to_have_been_called_with();
+            expect($watched)->not_to_have_been_called_with(null);
+            $watched('foo', 'bar');
+            expect($watched)->to_have_been_called_with();
+            expect($watched)->to_have_been_called_with('foo', 'bar');
+            expect($watched)->not_to_have_been_called_with('foo', 'bar', 'foobar');
+            $watched(array(0 => 'foo', 10 => 'bar'));
+            expect($watched)->to_have_been_called_with(array(0 => 'foo', 10 => 'bar'));
+            expect($watched)->not_to_have_been_called_with(array('foo', 'bar'));
         });
     });
 });
