@@ -151,6 +151,13 @@ describe("pecs", function() {
                 function($s) {
                     $watched = pecs\watched(function(){});
                     $watched(1);
+                    $s->expect($watched)->to_have_been_called_with(2);
+                },
+                "expected function to have been called with array(0 => 2), but was " .
+                "called with [array(0 => 1)]",
+                function($s) {
+                    $watched = pecs\watched(function(){});
+                    $watched(1);
                     $watched(2);
                     $s->expect($watched)->to_have_been_called_with(3);
                 },
